@@ -1,4 +1,5 @@
 use bevy::prelude::*;
+use bevy_mod_picking::*;
 
 fn convert_position_zup_to_yup(position: Vec3) -> Vec3 {
     Vec3::new(position.x, position.z, -position.y)
@@ -13,9 +14,13 @@ fn convert_position_zup_to_yup(position: Vec3) -> Vec3 {
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
+        .add_plugins(DefaultPickingPlugins)
+        // .add_startup_system(setup_ui.system())
         .add_startup_system(setup)
         .add_system(pan_camera)
         .add_system(rotate_camera)
+        .add_system(print_picked_mesh)
+        // .add_system(update_ui_text.system())
         .run();
 }
 
@@ -36,16 +41,19 @@ fn create_cylinder(
     let rotation = Quat::from_rotation_arc(Vec3::Y, direction);
 
     // Create the cylinder in Bevy with the calculated height, center point, and rotation
-    commands.spawn(PbrBundle {
-        mesh: mesh.clone(),
-        material: material.clone(),
-        transform: Transform {
-            translation: center,
-            rotation,
-            scale: Vec3::new(radius, height / 2.0, radius),
+    commands.spawn((
+        PbrBundle {
+            mesh: mesh.clone(),
+            material: material.clone(),
+            transform: Transform {
+                translation: center,
+                rotation,
+                scale: Vec3::new(radius, height / 2.0, radius),
+            },
+            ..Default::default()
         },
-        ..Default::default()
-    });
+        PickableBundle::default(),
+    ));
 }
 
 fn pan_camera(
@@ -248,8 +256,79 @@ fn setup(
         ..default()
     });
     // camera
-    commands.spawn(Camera3dBundle {
-        transform: Transform::from_xyz(-5.0, 20.0, 15.0).looking_at(Vec3::ZERO, Vec3::Y),
-        ..default()
-    });
+    commands.spawn((
+        Camera3dBundle {
+            transform: Transform::from_xyz(-5.0, 20.0, 15.0).looking_at(Vec3::ZERO, Vec3::Y),
+            ..Default::default()
+        },
+        PickingCameraBundle::default(),
+    ));
 }
+
+fn print_picked_mesh(mut events: EventReader<PickingEvent>) {
+    // fn print_picked_mesh(mut events: EventReader<PickingEvent>, mut query: Query<&mut PickingMessage>) {
+    // let mut message = query.single_mut().unwrap();
+
+    for event in events.iter() {
+        match event {
+            PickingEvent::Selection(e) => info!("A selection event happened: {:?}", e),
+            PickingEvent::Hover(e) => info!("Egads! A hover event!? {:?}", e),
+            PickingEvent::Clicked(e) => info!("Gee Willikers, it's a click! {:?}", e),
+            // PickingEvent::Selection(e) => {
+            //     message.text = format!("A selection event happened: {:?}", e);
+            // }
+            // PickingEvent::Hover(e) => {
+            //     message.text = format!("Egads! A hover event!? {:?}", e);
+            // }
+            // PickingEvent::Clicked(e) => {
+            //     message.text = format!("Gee Willikers, it's a click! {:?}", e);
+            // }
+        }
+    }
+}
+
+// struct PickingMessage {
+//     text: String,
+// }
+
+// fn setup_ui(
+//     mut commands: Commands,
+//     asset_server: Res<AssetServer>,
+//     mut materials: ResMut<Assets<ColorMaterial>>,
+// ) {
+//     // Load the font
+//     let font = asset_server.load("fonts/FiraSans-Bold.ttf");
+
+//     // Spawn the UI camera
+//     commands.spawn_bundle(UiCameraBundle::default());
+
+//     // Spawn the text widget
+//     commands
+//         .spawn_bundle(TextBundle {
+//             style: Style {
+//                 align_self: AlignSelf::FlexEnd,
+//                 ..Default::default()
+//             },
+//             text: Text {
+//                 sections: vec![TextSection {
+//                     value: "".to_string(),
+//                     style: TextStyle {
+//                         font: font.clone(),
+//                         font_size: 24.0,
+//                         color: Color::WHITE,
+//                     },
+//                 }],
+//                 ..Default::default()
+//             },
+//             ..Default::default()
+//         })
+//         .insert(PickingMessage {
+//             text: "".to_string(),
+//         }); // Add the PickingMessage component
+// }
+
+// fn update_ui_text(mut query: Query<(&PickingMessage, &mut Text)>) {
+//     if let Ok((message, mut ui_text)) = query.single_mut() {
+//         ui_text.sections[0].value = message.text.clone();
+//     }
+// }
